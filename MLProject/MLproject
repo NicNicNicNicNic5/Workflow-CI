@@ -1,0 +1,19 @@
+name: SMSML-Nicholas-Workflow-CI
+
+conda_env: ../conda.yaml
+
+entry_points:
+  main:
+    parameters:
+      train_data: {type: str, default: "../data/train.csv"}
+      test_data: {type: str, default: "../data/test.csv"}
+      c: {type: float, default: 1.0}
+      max_iter: {type: int, default: 2000}
+      random_state: {type: int, default: 42}
+    command: >
+      python ../modelling.py
+      --train-data {train_data}
+      --test-data {test_data}
+      --c {c}
+      --max-iter {max_iter}
+      --random-state {random_state}

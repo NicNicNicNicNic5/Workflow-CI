@@ -1,0 +1,48 @@
+name: MLflow Project CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  train:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install mlflow==2.19.0 pandas scikit-learn
+
+      - name: Validate project files
+        run: |
+          test -f MLProject/MLproject
+          test -f conda.yaml
+          test -f modelling.py
+          test -f data/train.csv
+          test -f data/test.csv
+
+      - name: Run MLflow Project
+        run: |
+          mlflow run MLProject --env-manager local
+
+      - name: Upload training outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mlflow-training-outputs
+          path: |
+            outputs/metrics.json
+            outputs/classification_report.json
+          if-no-files-found: warn
