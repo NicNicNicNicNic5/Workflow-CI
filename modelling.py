@@ -77,7 +77,8 @@ def main():
         })
         mlflow.log_metrics(metrics)
 
-        output_dir = Path("outputs")
+        project_root = Path(__file__).resolve().parent
+        output_dir = project_root / "outputs"
         output_dir.mkdir(parents=True, exist_ok=True)
 
         (output_dir / "run_id.txt").write_text(run_id)
