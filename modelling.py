@@ -45,7 +45,8 @@ def main():
         random_state=args.random_state,
     )
 
-    with mlflow.start_run():
+    with mlflow.start_run() as run:
+        run_id = run.info.run_id
         model.fit(X_train, y_train)
 
         predictions = model.predict(X_test)
@@ -78,6 +79,8 @@ def main():
 
         output_dir = Path("outputs")
         output_dir.mkdir(parents=True, exist_ok=True)
+
+        (output_dir / "run_id.txt").write_text(run_id)
 
         report = classification_report(
             y_test,
