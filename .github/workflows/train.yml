@@ -1,3 +1,4 @@
+
 name: MLflow Project CI
 
 on:
@@ -8,8 +9,13 @@ on:
   workflow_dispatch:
 
 jobs:
-  train:
+  train-and-push:
+    # Do not push Docker images from pull requests.
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
+
+    env:
+      MLFLOW_TRACKING_URI: file:${{ github.workspace }}/mlruns
 
     steps:
       - name: Checkout repository
@@ -19,6 +25,9 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Install dependencies
         run: |
@@ -37,6 +46,31 @@ jobs:
         run: |
           mlflow run MLProject --env-manager local
 
+      - name: Read MLflow run ID
+        id: model-run
+        run: |
+          test -f outputs/run_id.txt
+          RUN_ID=$(cat outputs/run_id.txt)
+          echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+          echo "Model run ID: $RUN_ID"
+
+      - name: Build Docker image from MLflow model
+        run: |
+          mlflow models build-docker \
+            --model-uri "runs:/${{ steps.model-run.outputs.run_id }}/model" \
+            --name "nicholas5/smsml-nicholas:latest" \
+            --env-manager local
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Push Docker image
+        run: |
+          docker push nicholas5/smsml-nicholas:latest
+
       - name: Upload training outputs
         if: always()
         uses: actions/upload-artifact@v4
@@ -45,4 +79,5 @@ jobs:
           path: |
             outputs/metrics.json
             outputs/classification_report.json
+            outputs/run_id.txt
           if-no-files-found: warn
